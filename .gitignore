@@ -1,0 +1,27 @@
+# Secrets and local environment configuration
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated builds
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Logs and runtime output
+*.log
+logs/
+
+# macOS and editor state
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Local scratch files
+*.tmp
+*.temp
+tmp/
+temp/

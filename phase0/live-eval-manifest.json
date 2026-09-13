@@ -1,0 +1,86 @@
+{
+  "phase": "0",
+  "status": "discovery-complete",
+  "discoveredAt": "2026-09-13T18:03:00Z",
+  "dataPolicy": "live-data-only",
+  "sources": {
+    "lemma": {
+      "apiBase": "https://api.uselemma.ai",
+      "projectId": "c432af06-72d6-40eb-bf11-0987305e6d74",
+      "retrieval": "GET /traces/search, GET /traces/{trace_id}?project_id={project_id}",
+      "accessVerified": true,
+      "retentionNote": "Lemma traces are retained for 14 days."
+    },
+    "github": {
+      "cli": "gh",
+      "repository": "benschiller/floperati",
+      "accessVerified": true
+    },
+    "render": {
+      "cli": "render",
+      "service": "srv-dag24tn40ujc73dg4b0g",
+      "serviceName": "agent-core",
+      "accessVerified": true
+    }
+  },
+  "candidates": [
+    {
+      "role": "candidate-failure",
+      "traceId": "85f0e9d3-de34-5c39-8901-87430ffd09ef",
+      "agent": "flopsmith",
+      "observedAt": "2026-09-13T18:02:51.023Z",
+      "observations": [
+        "Lemma reports one parallel_web_search tool error.",
+        "The tool input contains search_queries as a string.",
+        "Lemma records validation failure: expected array, received string."
+      ],
+      "sourceEvidence": {
+        "repository": "benschiller/floperati",
+        "path": "agent-core/src/mastra/tools/flopsmith/parallel-search.ts",
+        "line": 43,
+        "excerpt": "search_queries: z.array(z.string()).describe(\"2-4 keyword search queries.\")",
+        "intentExplanation": "Flopsmith's web-search tool is intended to receive two to four keyword queries as an array of strings. The adapter also derives a research objective and forwards a complete request to the search service."
+      },
+      "renderEvidence": {
+        "queryWindow": {
+          "start": "2026-09-13T18:02:35Z",
+          "end": "2026-09-13T18:03:10Z"
+        },
+        "status": "unresolved",
+        "note": "The queried window contains contemporaneous model failures, but no matching parallel_web_search validation log was confirmed."
+      },
+      "evidenceStatus": "confirmed-trace-and-source-unresolved-render",
+      "evaluationStatus": "candidate-only"
+    },
+    {
+      "role": "candidate-healthy",
+      "traceId": "9907393e-e1f0-5ea6-94de-24ea1c1027ee",
+      "agent": "flopsmith",
+      "observedAt": "2026-09-13T17:56:41.784Z",
+      "observations": [
+        "Lemma reports no tool calls and no span errors.",
+        "The trace completed with a generated output."
+      ],
+      "sourceEvidence": {
+        "repository": "benschiller/floperati",
+        "path": "agent-core/src/mastra/agents/flopsmith.ts",
+        "status": "not-yet-inspected",
+        "intentExplanation": "Flopsmith is intended to complete one research job and return a finished RESULT. It may use its research tools when needed, but the final response should satisfy the job's requested output contract."
+      },
+      "renderEvidence": {
+        "queryWindow": {
+          "start": "2026-09-13T17:56:20Z",
+          "end": "2026-09-13T17:56:45Z"
+        },
+        "status": "unresolved"
+      },
+      "evidenceStatus": "trace-only",
+      "evaluationStatus": "candidate-only"
+    }
+  ],
+  "notes": [
+    "The candidates are observations from live Lemma data, not predetermined evaluation fixtures.",
+    "No Slack integration or reasoning model was selected in Phase 0.",
+    "The Render model-not-found logs observed during discovery are retained as a separate lead and are not assigned to a candidate without a deterministic correlation."
+  ]
+}
