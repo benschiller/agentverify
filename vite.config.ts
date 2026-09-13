@@ -33,7 +33,24 @@ function apiPlugin(env: Record<string, string>): Plugin {
         const result = await fetch(`https://api.uselemma.ai/traces/search?project_id=${encodeURIComponent(project)}&limit=12`, { headers: { Authorization: "Bearer " + key } });
         if (!result.ok) throw new Error(`Lemma search failed: ${result.status}`);
         const traces = await result.json() as Array<{ id: string; service_name?: string; timestamp: string; issue_extraction?: { issue_count?: number } }>;
-        return jsonResponse(res, traces.map((trace) => ({ role: (trace.issue_extraction?.issue_count ?? 0) > 0 ? "observed-issue" : "observed-run", traceId: trace.id, agent: trace.service_name ?? "unknown service", observedAt: trace.timestamp, sourceEvidence: { repository: env.GITHUB_REPOSITORY ?? "configured repository", path: "trace-derived" }, renderEvidence: { queryWindow: { start: trace.timestamp, end: trace.timestamp }, status: "deferred" }, evidenceStatus: "live Lemma trace", evaluationStatus: "not-yet-compared" })));
+        const candidates = await Promise.all(traces.map(async (trace) => {
+          const detail = await fetch(
+            `https://api.uselemma.ai/traces/${encodeURIComponent(trace.id)}?project_id=${encodeURIComponent(project)}`,
+            { headers: { Authorization: "Bearer " + key } },
+          );
+          const detailTrace = detail.ok ? await detail.json() as { agent_name?: string } : {};
+          return {
+            role: (trace.issue_extraction?.issue_count ?? 0) > 0 ? "observed-issue" : "observed-run",
+            traceId: trace.id,
+            agent: detailTrace.agent_name ?? trace.service_name ?? "unknown service",
+            observedAt: trace.timestamp,
+            sourceEvidence: { repository: env.GITHUB_REPOSITORY ?? "configured repository", path: "trace-derived" },
+            renderEvidence: { queryWindow: { start: trace.timestamp, end: trace.timestamp }, status: "deferred" },
+            evidenceStatus: "live Lemma trace",
+            evaluationStatus: "not-yet-compared",
+          };
+        }));
+        return jsonResponse(res, candidates);
       } catch (error) { return jsonResponse(res, { error: error instanceof Error ? error.message : "Unable to load live runs" }, 502); }
     });
     server.middlewares.use("/api/lemma", async (req, res) => {
