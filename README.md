@@ -1,7 +1,5 @@
 # AgentVerify
 
-> Looking at the agent's execution traces and source code, is the deployed agent performing as intended?
-
 AgentVerify is a multi-step reliability auditor for deployed AI agents. It gathers live evidence, compares observed behavior with the behavior described by source code, asks a human for approval in Slack when it finds a problem, and creates a GitHub issue only after that approval.
 
 This is a hackathon project built around a real business problem: AI agents can appear healthy while silently skipping required tools, sending malformed inputs, or drifting from their intended workflow. AgentVerify turns those hard-to-review execution details into a short, evidence-backed decision for an engineering team.
@@ -114,6 +112,5 @@ AgentVerify successfully achieves its target when it can make a concise, reviewa
 
 ## Current limitations and future development
 
-- The Slack approval bridge currently keeps pending approvals in process memory; a durable store would be needed for restart-safe production operation.
 - The local Slack approval bridge currently keeps pending approvals in process memory; a durable store would be needed for restart-safe production operation.
 - Future versions could add richer evidence citations, persistent findings, confidence calibration, hosted deployment, and support for additional source hosts and approval systems.
