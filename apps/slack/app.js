@@ -1,9 +1,18 @@
+import { fileURLToPath } from 'node:url';
 import { App, LogLevel } from '@slack/bolt';
 import { config } from 'dotenv';
 import { registerBridge } from './bridge.js';
 import { registerListeners } from './listeners/index.js';
 
-config();
+config({ path: fileURLToPath(new URL('./.env', import.meta.url)) });
+
+const requiredEnv = ['SLACK_BOT_TOKEN', 'SLACK_APP_TOKEN'];
+const missingEnv = requiredEnv.filter((name) => !process.env[name]);
+if (missingEnv.length > 0) {
+  throw new Error(
+    `Missing Slack environment variables: ${missingEnv.join(', ')}. Copy apps/slack/.env.sample to apps/slack/.env and fill in the values.`,
+  );
+}
 
 /** Initialization */
 const app = new App({

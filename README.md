@@ -35,9 +35,8 @@ AgentVerify connects to these external systems:
 | **Lemma** | Live trace feed from the Mastra-powered `floperati` agent. This is the evidence for what the deployed agent actually did. |
 | **GitHub** | Live source-of-truth retrieval and approved issue creation in `benschiller/floperati`. |
 | **Slack** | Human approval and escalation channel for non-matching or uncertain findings. |
-| **Render** | Deployment target for the AgentVerify web service and Slack service. Runtime log evidence is prepared as an extension point for the investigation flow. |
 
-The deployed audit target and the AgentVerify console are separate systems. Lemma receives traces from the live Mastra project; it is not the telemetry source for the console itself.
+The audited agent and the AgentVerify console are separate systems. Lemma receives traces from the live Mastra project; it is not the telemetry source for the console itself. AgentVerify itself runs locally as two monorepo apps for this hackathon demo.
 
 ### 3. Setup instructions
 
@@ -56,9 +55,10 @@ git clone https://github.com/benschiller/agentverify.git
 cd agentverify
 npm install
 cp .env.example .env
+cp apps/slack/.env.sample apps/slack/.env
 ```
 
-Fill in `.env` with live credentials. Never commit `.env`.
+Fill in the root `.env` with Lemma, model, GitHub, and AgentVerify settings. Fill in `apps/slack/.env` with the Slack bot and app tokens. Never commit either `.env` file.
 
 Start the AgentVerify console:
 
@@ -72,24 +72,7 @@ Start the Slack app in a second terminal:
 npm start --workspace apps/slack
 ```
 
-The Slack app exposes the approval bridge on `SLACK_BRIDGE_PORT`. Set `SLACK_BRIDGE_URL` in the AgentVerify environment to that bridge URL and set `SLACK_CHANNEL_ID` to the channel where approval messages should appear.
-
-#### Deploy both services to Render
-
-The repository includes [`render.yaml`](./render.yaml), which defines two Render web services:
-
-- `agentverify`
-- `agentverify-slack`
-
-In Render:
-
-1. Create a new Blueprint from this repository.
-2. Review the two services from `render.yaml`.
-3. Add the secret values marked `sync: false`.
-4. Deploy the Blueprint.
-5. Confirm the AgentVerify service can reach the Slack service health endpoint.
-
-The Slack app still uses Socket Mode, so it does not require a public Slack Events webhook. The approval bridge is protected by `SLACK_BRIDGE_TOKEN`.
+The Slack app exposes the approval bridge on `SLACK_BRIDGE_PORT`. Set `SLACK_BRIDGE_URL` in the root `.env` to that local bridge URL and set `SLACK_CHANNEL_ID` to the channel where approval messages should appear. The Slack app still uses Socket Mode, so it does not require a public Slack Events webhook. The bridge can be protected with `SLACK_BRIDGE_TOKEN`.
 
 ### 4. Reliability testing
 
@@ -131,7 +114,6 @@ AgentVerify successfully achieves its target when it can make a concise, reviewa
 
 ## Current limitations and future development
 
-- The Render log card is intentionally deferred while the core trace → source → verdict loop remains simple and legible.
 - The Slack approval bridge currently keeps pending approvals in process memory; a durable store would be needed for restart-safe production operation.
-- The deployed Slack service and AgentVerify service should be monitored and given explicit retry, timeout, and audit policies before broader organizational use.
-- Future versions could add Render log correlation, richer evidence citations, persistent findings, confidence calibration, and support for additional source hosts and approval systems.
+- The local Slack approval bridge currently keeps pending approvals in process memory; a durable store would be needed for restart-safe production operation.
+- Future versions could add richer evidence citations, persistent findings, confidence calibration, hosted deployment, and support for additional source hosts and approval systems.
