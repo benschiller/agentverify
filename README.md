@@ -97,7 +97,7 @@ This verifies the central claim: AgentVerify's finding is grounded in live trace
 
 ### 5. Demo video
 
-[![Demo video](https://i.imgur.com/RfXJhEh.png)](https://youtu.be/zFkPWmlhfzE)
+[![Demo video](https://i.imgur.com/RfXJhEh.png)](https://youtu.be/nbG4E7K0rLM)
 
 Here we walk you though AgentVerify with live data from a Mastra swarm being fed through Lemma. The traces are observed and the agent's function is compared against its original intent from the code on GitHub. Problems are flagged and forwarded for human review in Slack. From there, an issue can be created on GitHub to address the offending action.
 
