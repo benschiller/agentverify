@@ -6,7 +6,7 @@
 
 AV answers:
 
-> "Looking at the agent's execution traces, production logs, and source code, is the deployed agent performing as intended?"
+> "Looking at the agent's execution traces and source code, is the deployed agent performing as intended?"
 
 If AV finds a meaningful problem, it does not attempt to fix it. Instead, it:
 
