@@ -97,7 +97,7 @@ This verifies the central claim: AgentVerify's finding is grounded in live trace
 
 ### 5. Demo video
 
-**Demo video:** [Placeholder — add the final video link here](https://example.com/agentverify-demo)
+[![Demo video](https://i.imgur.com/RfXJhEh.png)](https://youtu.be/zFkPWmlhfzE)
 
 The final video should be no longer than two minutes and show one live investigation from Lemma trace through GitHub comparison, Slack approval, and the resulting GitHub issue.
 
