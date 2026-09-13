@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: agentverify
+    runtime: node
+    rootDir: apps/agentverify
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: LEMMA_API_KEY
+        sync: false
+      - key: LEMMA_PROJECT_ID
+        sync: false
+      - key: OPENAI_COMPATIBLE_API_KEY
+        sync: false
+      - key: OPENAI_COMPATIBLE_URL
+        sync: false
+      - key: OPENAI_COMPATIBLE_MODEL
+        sync: false
+      - key: GITHUB_REPOSITORY
+        value: benschiller/floperati
+      - key: SLACK_BRIDGE_URL
+        fromService:
+          type: web
+          name: agentverify-slack
+          property: host
+      - key: SLACK_CHANNEL_ID
+        sync: false
+      - key: SLACK_BRIDGE_TOKEN
+        sync: false
+
+  - type: web
+    name: agentverify-slack
+    runtime: node
+    rootDir: apps/slack
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_APP_TOKEN
+        sync: false
+      - key: SLACK_BRIDGE_PORT
+        value: "10000"
+      - key: SLACK_BRIDGE_TOKEN
+        sync: false

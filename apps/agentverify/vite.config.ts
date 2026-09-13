@@ -23,6 +23,10 @@ function stringField(value: Record<string, unknown>, field: string) { if (typeof
 function jsonResponse(response: import("node:http").ServerResponse, value: unknown, status = 200) { response.statusCode = status; response.setHeader("Content-Type", "application/json"); response.end(JSON.stringify(value)); }
 async function body(request: import("node:http").IncomingMessage) { const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
 function bridgeHeaders(env: Record<string, string>) { return env.SLACK_BRIDGE_TOKEN ? { Authorization: "Bearer " + env.SLACK_BRIDGE_TOKEN } : {}; }
+function bridgeUrl(env: Record<string, string>) {
+  const value = env.SLACK_BRIDGE_URL ?? "http://127.0.0.1:3001";
+  return /^https?:\/\//.test(value) ? value : `https://${value}`;
+}
 
 function apiPlugin(env: Record<string, string>): Plugin {
   return { name: "agentverify-api", configureServer(server) {
@@ -91,7 +95,7 @@ function apiPlugin(env: Record<string, string>): Plugin {
       if (req.method !== "POST") return jsonResponse(res, { error: "Method Not Allowed" }, 405);
       try {
         const payload = await body(req) as { channelId?: string; traceId?: string; verdict?: string; observed?: string; expected?: string; comparison?: string };
-        const channelId = payload.channelId ?? env.SLACK_CHANNEL_ID, bridge = env.SLACK_BRIDGE_URL ?? "http://127.0.0.1:3001";
+        const channelId = payload.channelId ?? env.SLACK_CHANNEL_ID, bridge = bridgeUrl(env);
         if (!channelId || !payload.traceId || !payload.comparison) throw new Error("SLACK_CHANNEL_ID, traceId, and comparison are required");
         const requestId = randomUUID(), result = await fetch(`${bridge}/agentverify/approval`, { method: "POST", headers: { "Content-Type": "application/json", ...bridgeHeaders(env) }, body: JSON.stringify({ ...payload, channelId, requestId }) });
         const value = await result.json() as { error?: string }; if (!result.ok) throw new Error(value.error ?? "Slack bridge failed"); return jsonResponse(res, value);
@@ -99,14 +103,14 @@ function apiPlugin(env: Record<string, string>): Plugin {
     });
     server.middlewares.use("/api/slack/status", async (req, res) => {
       if (req.method !== "GET") return jsonResponse(res, { error: "Method Not Allowed" }, 405);
-      try { const id = new URL(req.url ?? "/", "http://127.0.0.1").searchParams.get("requestId"); if (!id) throw new Error("requestId is required"); const bridge = env.SLACK_BRIDGE_URL ?? "http://127.0.0.1:3001"; const result = await fetch(`${bridge}/agentverify/approval/${encodeURIComponent(id)}`, { headers: bridgeHeaders(env) }); const value = await result.json() as { error?: string }; if (!result.ok) throw new Error(value.error ?? "Slack status failed"); return jsonResponse(res, value); }
+      try { const id = new URL(req.url ?? "/", "http://127.0.0.1").searchParams.get("requestId"); if (!id) throw new Error("requestId is required"); const result = await fetch(`${bridgeUrl(env)}/agentverify/approval/${encodeURIComponent(id)}`, { headers: bridgeHeaders(env) }); const value = await result.json() as { error?: string }; if (!result.ok) throw new Error(value.error ?? "Slack status failed"); return jsonResponse(res, value); }
       catch (error) { return jsonResponse(res, { error: error instanceof Error ? error.message : "Slack status failed" }, 502); }
     });
     server.middlewares.use("/api/github/issue", async (req, res) => {
       if (req.method !== "POST") return jsonResponse(res, { error: "Method Not Allowed" }, 405);
       try {
         const payload = await body(req) as { approvalRequestId?: string; title?: string; body?: string }; if (!payload.approvalRequestId || !payload.title || !payload.body) throw new Error("approvalRequestId, title, and body are required");
-        const bridge = env.SLACK_BRIDGE_URL ?? "http://127.0.0.1:3001", status = await fetch(`${bridge}/agentverify/approval/${encodeURIComponent(payload.approvalRequestId)}`, { headers: bridgeHeaders(env) }), approval = await status.json();
+        const status = await fetch(`${bridgeUrl(env)}/agentverify/approval/${encodeURIComponent(payload.approvalRequestId)}`, { headers: bridgeHeaders(env) }), approval = await status.json();
         const approved = approval as { error?: string; status?: string };
         if (!status.ok) throw new Error(approved.error ?? "Unable to verify Slack approval"); if (approved.status !== "approved") throw new Error(`GitHub issue blocked: Slack approval is ${approved.status}`);
         const repository = env.GITHUB_REPOSITORY; if (!repository) throw new Error("GITHUB_REPOSITORY is required"); return jsonResponse(res, { url: await createGithubIssue(repository, payload.title, payload.body), repository });
