@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { fetchGithubSource, listGithubSourcePaths } from "./server/githubSource";
 import { createGithubIssue } from "./server/githubIssue";
 
@@ -26,6 +27,9 @@ function bridgeHeaders(env: Record<string, string>) { return env.SLACK_BRIDGE_TO
 function bridgeUrl(env: Record<string, string>) {
   const value = env.SLACK_BRIDGE_URL ?? "http://127.0.0.1:3001";
   return /^https?:\/\//.test(value) ? value : `https://${value}`;
+}
+function isSourceFile(path: string) {
+  return /\.(c|cc|cpp|cs|go|java|js|jsx|mjs|py|rb|rs|ts|tsx|vue|svelte)$/i.test(path);
 }
 
 function apiPlugin(env: Record<string, string>): Plugin {
@@ -74,11 +78,12 @@ function apiPlugin(env: Record<string, string>): Plugin {
       try {
         const payload = await body(req) as { trace?: Trace; observed?: string }, repository = env.GITHUB_REPOSITORY;
         if (!payload.trace || !payload.observed || !repository) throw new Error("trace, observed, and GITHUB_REPOSITORY are required");
-        const paths = await listGithubSourcePaths(repository);
-        const location = await askModel("Choose the single most relevant source path from the supplied live repository file list using the live trace. Return JSON with exactly one field: path. Copy it exactly.", { observed: payload.observed, trace: traceSummary(payload.trace), repositoryFiles: paths }, env);
+        const paths = (await listGithubSourcePaths(repository)).filter(isSourceFile);
+        if (paths.length === 0) throw new Error("No source files were found in the configured GitHub repository");
+        const location = await askModel("Choose the single source-code file that implements the live agent identified by the trace. Use the agent name, trace spans, tool calls, and observed behavior to choose the implementation file, not documentation, tests, examples, configuration, or reference material. Return JSON with exactly one field: path. Copy it exactly from the supplied source-code file list.", { observed: payload.observed, trace: traceSummary(payload.trace), repositorySourceFiles: paths }, env);
         const path = stringField(location, "path"); if (!paths.includes(path)) throw new Error("Reasoner returned a source path that does not exist");
         const source = await fetchGithubSource({ repository, path });
-        const intent = await askModel("Explain what this source does and what the observed trace should have done. Return JSON with exactly two fields: expected (one paragraph) and excerpt (short pertinent line-numbered snippet). Use only supplied source and trace.", { source: source.content, path, observed: payload.observed, trace: traceSummary(payload.trace) }, env);
+        const intent = await askModel("Explain the behavior required by this live agent implementation and compare it with the supplied live trace. Return JSON with exactly two fields: expected (one concise human-readable paragraph) and excerpt (short pertinent line-numbered snippet). Do not describe repository documentation, hypothetical systems, or unrelated files. Use only the supplied source and trace.", { source: source.content, path, observed: payload.observed, trace: traceSummary(payload.trace) }, env);
         return jsonResponse(res, { ...source, content: stringField(intent, "excerpt"), intentExplanation: stringField(intent, "expected") });
       } catch (error) { return jsonResponse(res, { error: error instanceof Error ? error.message : "GitHub stage failed" }, 502); }
     });
@@ -119,4 +124,8 @@ function apiPlugin(env: Record<string, string>): Plugin {
   } };
 }
 
-export default defineConfig(({ mode }) => { const env = loadEnv(mode, process.cwd(), ""); return { envDir: ".", plugins: [react(), apiPlugin(env)], publicDir: "phase0", server: { fs: { strict: true } } }; });
+export default defineConfig(({ mode }) => {
+  const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
+  const env = loadEnv(mode, repositoryRoot, "");
+  return { envDir: repositoryRoot, plugins: [react(), apiPlugin(env)], publicDir: "phase0", server: { fs: { strict: true } } };
+});
